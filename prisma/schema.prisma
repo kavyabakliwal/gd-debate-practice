@@ -1,0 +1,106 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id String  @id @default(uuid())
+  name String?
+  email String @unique
+  passwordHash String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt 
+  debates Debate[]
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum UserStance {
+  FOR 
+  AGAINST
+}
+
+enum Status {
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum FallacyType {
+  STRAW_MAN
+  FALSE_DILEMMA
+  AD_HOMINEM
+  HASTY_GENERALIZATION
+  CIRCULAR_REASONING
+  APPEAL_TO_AUTHORITY
+}
+
+model Debate {
+  id String @id@default(uuid())
+  user_id String
+  user User @relation(fields: [user_id], references: [id])
+  topic String 
+  difficulty Difficulty @default(MEDIUM)
+  userStance UserStance @default(FOR)
+  totalRounds Int
+  status Status @default(IN_PROGRESS)
+  createdAt DateTime @default(now())
+  completedAt DateTime? 
+  debateRounds DebateRound[]
+}
+
+model DebateRound {
+  id String @id@default(uuid())
+  debateId String 
+  debate Debate @relation(fields: [debateId], references: [id])
+  roundNumber Int 
+  userArgument String 
+  aiArgument String
+  createdAt DateTime @default(now())
+  // There will a time when evaluation will not happen
+  evaluation Evaluation? 
+  fallacy FallacyInstance[]
+
+  @@unique([debateId,roundNumber]) // Block Level Attributes
+}
+
+model Evaluation {
+  id String @id@default(uuid())
+  roundId String @unique
+  round DebateRound @relation(fields: [roundId], references: [id])
+  evidenceScore Int 
+  logicScore Int 
+  relevanceScore Int
+  counterargumentScore Int 
+  persuasivenessScore Int 
+  overallScore Float
+  // Created five different for all five reasons Rather than having one 
+  // Feedback for all 
+  evidenceReason String
+  logicReason String
+  relevanceReason String
+  counterargumentReason String
+  persuasivenessReason String
+  createdAt DateTime @default(now())
+}
+
+model FallacyInstance {
+  id String @id@default(uuid())
+  debateRoundId String 
+  debateRound DebateRound @relation(fields: [debateRoundId], references: [id])
+  type FallacyType 
+  explanation String
+  createdAt DateTime @default(now())
+}
