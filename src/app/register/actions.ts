@@ -3,6 +3,7 @@
 import { z } from "zod"
 import prisma from "@/lib/prisma"
 import bcrypt from "bcryptjs"
+import { signIn } from "@/auth";
 
 const CreateUser = z.object({
     name: z.string().trim().min(2,"Name must be atleast of 2 characters"),
@@ -46,6 +47,11 @@ export async function registerUser(
             email: email,
             passwordHash: passwordHash
         }
+    })
+    await signIn("credentials", {
+      email,
+      password,
+      redirectTo: "/dashboard",
     })
     return {
         success: true
