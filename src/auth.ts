@@ -2,6 +2,8 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
+import Google from "next-auth/providers/google";
+
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -42,6 +44,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         };
       },
     }),
+    Google
   ],
 
   session: {
@@ -49,9 +52,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
 
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
-        token.id = user.id;
+        // Because When google is provider user.id = google id not user's
+        if (account?.provider === "google"){
+          const lookUser = await prisma.user.findUnique({
+            where : {email : user.email?.toLowerCase()}
+          })
+          if (lookUser) token.id = lookUser?.id
+          else console.error("User not found")
+        }
+        else token.id = user.id;
       }
       return token;
     },
@@ -61,5 +72,37 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       return session;
     },
+    async signIn({account,profile}){
+      if (account?.provider === "google"){
+        try {
+        const userEmail = profile?.email?.toLowerCase()
+        if (!profile?.email_verified || userEmail === undefined ) return "/login?error=unverified-email"
+        const user = await prisma.user.findUnique({
+          where : { email: userEmail }
+        })
+
+        if (!user){
+          await prisma.user.create({
+            data : {
+              name : profile.name,
+              email : userEmail
+            }
+          })
+          return true
+        }
+
+        if (user){
+          if (user.passwordHash !== null) return "/login?error=password-account"
+        }
+        return true
+      }
+      catch (e){
+        console.error(e)
+        return "/login?error=server-error"
+      }
+      }
+      return true
+    }
   },
+  pages: {signIn: "/login", error: "/login"}
 });

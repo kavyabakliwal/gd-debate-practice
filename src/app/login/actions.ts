@@ -4,6 +4,7 @@ import { z } from "zod"
 import { signIn } from "@/auth"
 import { AuthError } from "next-auth"
 
+
 export type LoginState = {
   success: boolean
   error: string
@@ -51,4 +52,8 @@ export async function loginUser(
 
   // Only reached if signIn doesn't redirect; satisfies the return type
   return { success: true, error: "" }
+}
+
+export async function googleSignIn(){
+  await signIn("google",{redirectTo: "/dashboard"})
 }
